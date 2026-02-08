@@ -47,7 +47,9 @@ End-to-end proof of concept for **user-ID-based canary deployment** on Azure Kub
 
 **Argo CD:** Point your Argo CD Application at this repo (or the path that contains this POC). After migration, Argo CD syncs either the base manifests (two Deployments) or the Argo Rollout manifests; no Recreate strategy, no downtime.
 
-See [Architecture](./docs/01-Architecture.md) and [Runbook](./docs/02-Runbook.md) for details.
+**[→ End-to-End Setup Guide](./docs/00-Setup-Guide-End-to-End.md)** — Single guide to run the full POC (prerequisites → deploy → test stable/canary → promote or rollback).
+
+See also [Architecture](./docs/01-Architecture.md) and [Runbook](./docs/02-Runbook.md).
 
 ## Repository Layout
 
@@ -55,9 +57,10 @@ See [Architecture](./docs/01-Architecture.md) and [Runbook](./docs/02-Runbook.md
 aks-canary-user-based/
 ├── README.md                    # This file
 ├── docs/
+│   ├── 00-Setup-Guide-End-to-End.md  # Single guide: run full POC from scratch
 │   ├── 01-Architecture.md       # Architecture and diagrams
 │   ├── 02-Runbook.md            # Deploy, test, promote, rollback
-│   ├── 03-Migrate-From-Recreate.md  # Migration guide: Recreate → Canary
+│   ├── 03-Migrate-From-Recreate.md  # Migration: Recreate → Canary
 │   └── 04-Migrate-To-Argo-Rollouts.md  # Migration to Argo Rollouts
 ├── sample-app/
 │   ├── Dockerfile               # Build v1 and v2 images (APP_VERSION build-arg)
@@ -96,8 +99,7 @@ aks-canary-user-based/
 
 ## Next Steps
 
-- **Start:** [Migration from Argo CD + Recreate → Canary](./docs/03-Migrate-From-Recreate.md) (remove Recreate, add canary)
-- **Optional:** [Use Argo Rollouts with Argo CD](./docs/04-Migrate-To-Argo-Rollouts.md) (single Rollout, promote/abort)
-- [Architecture and components](./docs/01-Architecture.md)
-- [Deploy, test, and promote](./docs/02-Runbook.md)
-- [Example pipeline](./workflows/canary-deploy.yml)
+- **[End-to-End Setup Guide](./docs/00-Setup-Guide-End-to-End.md)** — Run the full demo from scratch (recommended to show the POC)
+- [Migration from Argo CD + Recreate → Canary](./docs/03-Migrate-From-Recreate.md) (remove Recreate, add canary)
+- [Use Argo Rollouts with Argo CD](./docs/04-Migrate-To-Argo-Rollouts.md) (single Rollout, promote/abort)
+- [Architecture](./docs/01-Architecture.md) · [Runbook](./docs/02-Runbook.md) · [Example pipeline](./workflows/canary-deploy.yml)
