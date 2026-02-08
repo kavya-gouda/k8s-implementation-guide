@@ -1,0 +1,40 @@
+# Canary Ingress - same host/path as main; traffic sent here only when header matches
+# Users with X-User-Id matching the pattern get the canary (new version)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-canary-ingress
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/canary: "true"
+    # Route to canary when this header is present and matches pattern
+    nginx.ingress.kubernetes.io/canary-by-header: "X-User-Id"
+    # Regex: allow these exact user IDs (add more with |)
+    nginx.ingress.kubernetes.io/canary-by-header-pattern: "user-canary-001|user-canary-002"
+    # Optional: also support single value (no regex)
+    # nginx.ingress.kubernetes.io/canary-by-header-value: "user-canary-001"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: canary-demo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: canary-svc
+            port:
+              number: 80
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: canary-svc
+            port:
+              number: 80

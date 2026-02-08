@@ -1,0 +1,13 @@
+# Optional: reference list of canary user IDs (used by scripts/docs; routing is in ingress-canary annotations)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canary-users
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+data:
+  # Comma-separated list; keep in sync with ingress-canary canary-by-header-pattern regex
+  CANARY_USER_IDS: "user-canary-001,user-canary-002"
+  # Regex pattern for NGINX (same as in ingress-canary.yaml)
+  CANARY_HEADER_PATTERN: "user-canary-001|user-canary-002"

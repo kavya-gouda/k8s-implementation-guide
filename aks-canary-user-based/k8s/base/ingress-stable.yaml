@@ -1,0 +1,35 @@
+# Main Ingress - routes to stable by default (existing app, no downtime)
+# Use same host/path as your current app; adjust host if needed for your AKS setup
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-stable-ingress
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  # Replace with your host or use * for testing
+  - host: canary-demo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stable-svc
+            port:
+              number: 80
+  # Allow access without host (e.g. via LoadBalancer IP) for POC
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stable-svc
+            port:
+              number: 80

@@ -1,0 +1,6 @@
+{
+  "name": "canary-demo-app",
+  "version": "1.0.0",
+  "description": "Sample frontend app for user-based canary demo",
+  "main": "server.js"
+}

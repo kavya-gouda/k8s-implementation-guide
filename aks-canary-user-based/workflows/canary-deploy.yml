@@ -1,0 +1,93 @@
+# Example: GitHub Actions workflow for canary deploy on AKS
+# - Builds app v1 (stable) and v2 (canary) images
+# - Pushes to ACR
+# - Deploys/updates stable and canary to AKS (no downtime)
+# - Optional: run tests against canary endpoint with X-User-Id
+#
+# Secrets: ACR_USERNAME, ACR_PASSWORD (or use ACR admin), AKS_KUBECONFIG or AZURE_CREDENTIALS + cluster name
+name: Canary Deploy to AKS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ACR_NAME: myregistry   # set or use var
+  AKS_NAMESPACE: canary-demo
+  IMAGE_STABLE: canary-demo:1
+  IMAGE_CANARY: canary-demo:2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push stable image
+        run: |
+          cd aks-canary-user-based/sample-app
+          docker build --build-arg APP_VERSION=1 -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_STABLE }} .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_STABLE }}
+
+      - name: Build and push canary image
+        run: |
+          cd aks-canary-user-based/sample-app
+          docker build --build-arg APP_VERSION=2 -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_CANARY }} .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_CANARY }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: canary-aks
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ vars.AKS_RG }} --name ${{ vars.AKS_CLUSTER }} --overwrite-existing
+
+      - name: Deploy canary stack (stable + canary + ingress)
+        run: |
+          kubectl apply -f aks-canary-user-based/k8s/base/namespace.yaml
+          kubectl apply -f aks-canary-user-based/k8s/base/stable.yaml
+          kubectl apply -f aks-canary-user-based/k8s/base/canary.yaml
+          kubectl apply -f aks-canary-user-based/k8s/config/canary-users.yaml
+          kubectl apply -f aks-canary-user-based/k8s/base/ingress-stable.yaml
+          kubectl apply -f aks-canary-user-based/k8s/base/ingress-canary.yaml
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/app-stable -n ${{ env.AKS_NAMESPACE }} --timeout=120s
+          kubectl rollout status deployment/app-canary -n ${{ env.AKS_NAMESPACE }} --timeout=120s
+
+  test-canary:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Ingress IP
+        id: ingress
+        run: |
+          # Adjust for your ingress controller namespace and service name
+          IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+          echo "ingress_ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Test stable (no header)
+        run: |
+          curl -sf -o /dev/null -w "%{http_code}" "${{ steps.ingress.outputs.ingress_ip }}" || true
+
+      - name: Test canary (X-User-Id: user-canary-001)
+        run: |
+          curl -sf -H "X-User-Id: user-canary-001" -o /dev/null -w "%{http_code}" "http://${{ steps.ingress.outputs.ingress_ip }}/" || true

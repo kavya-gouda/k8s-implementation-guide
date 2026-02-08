@@ -1,0 +1,11 @@
+# Optional: apply all base resources with one command
+# kubectl apply -k k8s/base
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: canary-demo
+resources:
+  - namespace.yaml
+  - stable.yaml
+  - canary.yaml
+  - ingress-stable.yaml
+  - ingress-canary.yaml
