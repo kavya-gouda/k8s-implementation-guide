@@ -1,0 +1,21 @@
+# Optional: use with Rollout strategy.canary.analysis for automated promote/abort
+# Requires Prometheus in cluster (e.g. monitoring namespace)
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: canary-demo
+spec:
+  metrics:
+  - name: success-rate
+    interval: 30s
+    count: 3
+    successCondition: result[0] >= 0.95
+    failureCondition: result[0] < 0.90
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:80
+        query: |
+          sum(rate(http_requests_total{status=~"2.."}[1m]))
+          /
+          sum(rate(http_requests_total[1m]))

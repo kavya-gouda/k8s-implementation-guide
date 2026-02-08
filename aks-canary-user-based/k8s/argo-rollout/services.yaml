@@ -1,0 +1,32 @@
+# Services for Argo Rollouts canary. The rollout controller updates their selectors
+# to point to the stable and canary ReplicaSets (using rollouts-pod-template-hash).
+# Create these; do not set selectors that conflict with Argo's hash labels.
+apiVersion: v1
+kind: Service
+metadata:
+  name: stable-svc
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  selector:
+    app: canary-demo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: canary-svc
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  selector:
+    app: canary-demo

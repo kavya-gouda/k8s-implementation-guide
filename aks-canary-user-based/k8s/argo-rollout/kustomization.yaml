@@ -1,0 +1,13 @@
+# Argo Rollouts variant: one Rollout + two Services (replaces base/ stable + canary Deployments)
+# Use this when your app is already or will be managed by Argo Rollouts.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: canary-demo
+resources:
+  - ../base/namespace.yaml
+  - services.yaml
+  - rollout.yaml
+  - ../base/ingress-stable.yaml
+  - ../base/ingress-canary.yaml
+  # Optional: enable analysis for automatic promote/abort
+  # - analysis-template.yaml

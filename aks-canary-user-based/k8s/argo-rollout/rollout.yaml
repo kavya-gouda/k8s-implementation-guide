@@ -1,0 +1,64 @@
+# Argo Rollouts: single Rollout with canary strategy (replaces separate stable + canary Deployments)
+# stableService/canaryService are updated by the controller to route to stable/canary ReplicaSets.
+# Use with NGINX Ingress canary-by-header so only selected user IDs hit canary-svc.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: canary-demo
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: canary-demo
+  template:
+    metadata:
+      labels:
+        app: canary-demo
+    spec:
+      containers:
+      - name: app
+        image: canary-demo:1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: APP_VERSION
+          value: "1"
+        - name: PORT
+          value: "8080"
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+  strategy:
+    canary:
+      stableService: stable-svc
+      canaryService: canary-svc
+      maxSurge: "1"
+      maxUnavailable: 0
+      steps:
+      # Canary gets 1 pod (50% of 2); NGINX routes by X-User-Id to canary-svc
+      - setWeight: 50
+      - pause: {}   # Pause for manual verification (header-based users test canary)
+      # Promote when ready: kubectl argo rollouts promote canary-demo -n canary-demo
+      - setWeight: 100

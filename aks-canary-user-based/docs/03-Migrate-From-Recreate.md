@@ -1,8 +1,10 @@
 # Migrating from Recreate Strategy to Canary Deployment
 
-## Current State: Recreate Strategy
+This POC is self-contained; all paths and manifests refer only to this folder.
 
-Your existing application likely uses a Deployment with `strategy.type: Recreate`:
+## Current State: Argo CD + Recreate Strategy
+
+Your application is deployed with **Argo CD** (GitOps) and uses a Deployment with `strategy.type: Recreate`:
 
 ```yaml
 apiVersion: apps/v1
@@ -29,6 +31,8 @@ With canary deployment:
 - ✅ **Gradual rollout** - only specific users (by user ID) see the new version
 - ✅ **Safe testing** - validate new version with real users before full rollout
 - ✅ **Easy rollback** - remove canary ingress to revert instantly
+
+After migration, Argo CD continues to sync from Git; you replace the Recreate Deployment with the canary setup (stable + canary or a Rollout) in the same repo path Argo CD watches.
 
 ## Migration Steps (Zero Downtime)
 

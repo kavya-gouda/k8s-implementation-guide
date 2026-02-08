@@ -75,15 +75,15 @@ flowchart TB
 | Orchestration | **Kubernetes Deployments** | Stable and canary are two Deployments; no need to replace existing Deployment. |
 | Optional | **Argo Rollouts** | Use for automated canary steps (e.g. 20% → 50% → 100% by weight) and promotion; can be combined with header-based routing for “canary users” + “canary %” later. |
 
-## Migrating from Recreate Strategy
+## Migrating from Argo CD + Recreate Strategy
 
-If your current application uses **Recreate strategy** (`strategy.type: Recreate`), you'll need to:
+If your application is deployed with **Argo CD** and uses **Recreate strategy** (`strategy.type: Recreate`), you'll need to:
 
 1. **Remove the recreate strategy** from your Deployment (or convert it to stable)
 2. **Add canary deployment** alongside stable
 3. **Set up ingress routing** for header-based canary
 
-See **[Migration Guide: Recreate → Canary](./03-Migrate-From-Recreate.md)** for step-by-step instructions.
+See **[Migration Guide: Recreate → Canary](./03-Migrate-From-Recreate.md)** in this POC for step-by-step instructions.
 
 **Key benefit**: Moving from recreate to canary eliminates downtime during deployments.
 
@@ -135,4 +135,4 @@ See **[Migration Guide: Recreate → Canary](./03-Migrate-From-Recreate.md)** fo
 
 - [NGINX Ingress canary annotations](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary)
 - [AKS Application Routing (NGINX)](https://learn.microsoft.com/en-us/azure/aks/app-routing-nginx-configuration)
-- [Argo Rollouts](https://argoproj.github.io/argo-rollouts/) (optional, for automated steps)
+- [Argo Rollouts](https://argoproj.github.io/argo-rollouts/) (optional; manifests in this POC under `k8s/argo-rollout/`)

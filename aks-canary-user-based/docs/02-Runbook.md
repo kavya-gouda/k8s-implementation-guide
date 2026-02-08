@@ -2,9 +2,9 @@
 
 ## Bringing an existing deployment under canary (no downtime)
 
-If you already have a running app on AKS (especially if using **Recreate strategy**):
+If you already have a running app on AKS with **Argo CD** and **Recreate strategy**:
 
-> **📘 See [Migration Guide: Recreate → Canary](./03-Migrate-From-Recreate.md)** for detailed steps to convert your existing recreate Deployment to canary.
+> **📘 See [Migration Guide: Recreate → Canary](./03-Migrate-From-Recreate.md)** for steps to convert to canary (all within this POC).
 
 Quick steps:
 
@@ -25,10 +25,11 @@ Quick steps:
 - AKS cluster with **kubectl** context set
 - **NGINX Ingress Controller** installed (e.g. [AKS Application Routing](https://learn.microsoft.com/en-us/azure/aks/app-routing-nginx) or [ingress-nginx](https://kubernetes.github.io/ingress-nginx/deploy/))
 - Container images for stable (`canary-demo:1`) and canary (`canary-demo:2`) built and pushed to your registry (e.g. ACR)
+- **Argo CD (optional):** Point your Application at this POC path in Git; Argo CD will sync `k8s/base/` or `k8s/argo-rollout/` instead of your current Recreate Deployment.
 
 ## 1. Build and push sample images (POC)
 
-From repo root:
+From the POC root (folder that contains `sample-app`, `k8s`, `docs`):
 
 ```bash
 cd sample-app
@@ -42,6 +43,8 @@ docker push <ACR_NAME>.azurecr.io/canary-demo:2
 Update `k8s/base/stable.yaml` and `k8s/base/canary.yaml` to use `<ACR_NAME>.azurecr.io/canary-demo:1` and `:2` (and set `imagePullPolicy` / imagePullSecrets if private).
 
 ## 2. Deploy (no downtime)
+
+### Option A: Plain Deployments (stable + canary)
 
 Deploy in order: namespace → stable (existing) → canary → ingresses. Existing traffic stays on stable.
 
@@ -59,6 +62,16 @@ Or use the script:
 ```powershell
 .\scripts\deploy.ps1 -Namespace canary-demo
 ```
+
+### Option B: Argo Rollouts (works with Argo CD)
+
+Single Rollout resource; controller manages stable/canary Services. See [Migrate to Argo Rollouts](./04-Migrate-To-Argo-Rollouts.md) (same POC).
+
+```bash
+kubectl apply -k k8s/argo-rollout
+```
+
+Or: `.\scripts\deploy.ps1 -Namespace canary-demo -UseArgoRollout`
 
 Wait for pods:
 
@@ -118,7 +131,7 @@ kubectl apply -f k8s/base/ingress-canary.yaml
 
 ## 6. Promote canary to stable (full rollout)
 
-When the new version is validated:
+### If using plain Deployments
 
 1. Update **stable** Deployment to use the canary image (and same config as canary):
    ```bash
@@ -133,14 +146,34 @@ When the new version is validated:
 
 See `scripts/promote-canary.ps1` for an example.
 
+### If using Argo Rollouts
+
+When the new version is validated, promote the rollout (moves to next step and eventually completes):
+
+```bash
+kubectl argo rollouts promote canary-demo -n canary-demo
+```
+
+To roll out a new version later: update the Rollout template (e.g. image) and the controller will create a new canary and pause again:
+
+```bash
+kubectl argo rollouts set image canary-demo app=<ACR>.azurecr.io/canary-demo:2 -n canary-demo
+```
+
 ## 7. Rollback canary
 
 To stop sending canary users to the new version:
 
+**If using plain Deployments:**
 - **Option A**: Delete the canary Ingress so all traffic (including previous canary users) goes to stable:
   ```bash
   kubectl delete ingress app-canary-ingress -n canary-demo
   ```
 - **Option B**: Scale canary to 0 and delete canary Ingress (same effect).
+
+**If using Argo Rollouts:** Abort the rollout (traffic returns to stable; canary ReplicaSet scales down):
+```bash
+kubectl argo rollouts abort canary-demo -n canary-demo
+```
 
 No need to change stable Deployment; no downtime.
